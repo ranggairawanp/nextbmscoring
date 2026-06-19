@@ -270,12 +270,28 @@
   function bootstrap() {
     if (bootstrapped) return;
     bootstrapped = true;
-    _client.from('kv').select('path,value').eq('ns', NS)
-      .then(function (res) {
-        if (res && res.error) { console.error('[Supabase] muat awal gagal', res.error); }
-        var rows = (res && res.data) || [];
+    /* Supabase membatasi satu permintaan select maksimal 1000 baris.
+       Data satu batch dapat jauh melampaui itu (skor 6D, tier, exam,
+       peserta, dll.), sehingga pemuatan awal wajib bertahap dengan
+       range hingga seluruh baris terbaca. Tanpa ini, sebagian nilai
+       tidak pernah sampai ke halaman dan tampak hilang. */
+    var PAGE = 1000;
+    var acc = [];
+    function fetchPage(from) {
+      return _client.from('kv').select('path,value').eq('ns', NS)
+        .order('path', { ascending: true })
+        .range(from, from + PAGE - 1)
+        .then(function (res) {
+          if (res && res.error) { console.error('[Supabase] muat awal gagal', res.error); return; }
+          var rows = (res && res.data) || [];
+          for (var i = 0; i < rows.length; i++) acc.push(rows[i]);
+          if (rows.length === PAGE) return fetchPage(from + PAGE);
+        });
+    }
+    fetchPage(0)
+      .then(function () {
         cache = Object.create(null);
-        for (var i = 0; i < rows.length; i++) cache[rows[i].path] = rows[i].value;
+        for (var i = 0; i < acc.length; i++) cache[acc[i].path] = acc[i].value;
         var ch = _client.channel('kv_' + NS)
           .on('postgres_changes',
               { event: '*', schema: 'public', table: 'kv', filter: 'ns=eq.' + NS },

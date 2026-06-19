@@ -618,7 +618,7 @@ dbRef('/session/currentRound').on('value',s=>{
   renderRounds();
 });
 dbRef('/peserta/'+GID).on('value',snap=>{ PESERTA=snap.val()||{}; renderTabs(); renderCard(); });
-dbRef('/coach/').on('value',snap=>{
+dbRef('/coach').on('value',snap=>{
   // muat hanya cabang ini
   const all=snap.val()||{};
   COACH={};

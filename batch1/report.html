@@ -679,9 +679,16 @@ function computeOne(gid,p){
     status:cpi===null?'wait':(cpi>=3.0?'lulus':'belum')
   };
 }
+/* Slot peserta dianggap ada hanya bila terdaftar admin dengan nama.
+   Kelompok beranggota lima, yaitu Surabaya, Medan, dan Makassar,
+   otomatis tidak menampilkan slot P6 yang tak berpenghuni. */
+function isEnrolled(gid,p){
+  var rec = PESERTA && PESERTA[gid] && PESERTA[gid]['p'+p];
+  return !!(rec && String(rec.nama||'').trim());
+}
 function allParticipants(){
   const out=[];
-  GROUPS.forEach(g=>{ for(let p=1;p<=6;p++) out.push(computeOne(g.id,p)); });
+  GROUPS.forEach(g=>{ for(let p=1;p<=6;p++){ if(isEnrolled(g.id,p)) out.push(computeOne(g.id,p)); } });
   return out;
 }
 
@@ -737,6 +744,7 @@ function renderSummary(){
       +dv.zona.label+' &middot; ronde final '+dv.roundsDone+'/'+NRD+'</div>'
       +'<div class="pcard-grid">';
     for(let p=1;p<=6;p++){
+      if(!isEnrolled(g.id,p))continue;
       const r=computeOne(g.id,p);
       const idx=GROUPS.indexOf(g)*6+(p-1);
       html+='<div class="pcard" data-idx="'+idx+'">'
@@ -771,6 +779,7 @@ function fillSelector(){
   GROUPS.forEach((g,gi)=>{
     html+='<optgroup label="'+g.nama+'">';
     for(let p=1;p<=6;p++){
+      if(!isEnrolled(g.id,p))continue;
       const idx=gi*6+(p-1), nm=pName(g.id,p)||('Peserta P'+p);
       html+='<option value="'+idx+'">'+esc(nm)+' &middot; P'+p+'</option>';
     }
@@ -975,6 +984,7 @@ document.getElementById('btnTemplate').addEventListener('click',()=>{
   let no=1;
   GROUPS.forEach(g=>{
     for(let p=1;p<=6;p++){
+      if(!isEnrolled(g.id,p))continue;
       var _pp=(PESERTA[g.id]&&PESERTA[g.id]['p'+p])||{};
       var _nm=(pName(g.id,p)||_pp.nama||'');
       rows.push([no++,_nm,g.nama,p,'','','']);
@@ -1057,6 +1067,7 @@ function renderReview(){
     }else{
       html+='<select data-row="'+i+'"><option value="">pilih peserta</option>';
       GROUPS.forEach(g=>{ for(let p=1;p<=6;p++){
+        if(!isEnrolled(g.id,p))continue;
         html+='<option value="'+g.id+':'+p+'">'+g.nama+' P'+p+'</option>';
       }});
       html+='</select>';
@@ -1104,6 +1115,7 @@ document.getElementById('btnCSV').addEventListener('click',()=>{
   const lines=[head];
   let no=1;
   GROUPS.forEach(g=>{ for(let p=1;p<=6;p++){
+    if(!isEnrolled(g.id,p))continue;
     const r=computeOne(g.id,p);
     lines.push([no++,r.name,g.nama,p,r.prelearning?'Sudah':'Belum',
       r.pre!==null?r.pre:'',r.post!==null?r.post:'',
@@ -1539,6 +1551,7 @@ async function exportAllPDF(){
   try{
     const zip=new JSZip(); let n=0;
     GROUPS.forEach(g=>{ for(let p=1;p<=6;p++){
+      if(!isEnrolled(g.id,p))continue;
       const r=computeOne(g.id,p);
       const d=buildCardDoc(r);
       if(!d) return;

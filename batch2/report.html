@@ -653,6 +653,8 @@ function behaviorDetail(gid,p){
   return {avg:n?sum/n:0,rounds:n,perRound};
 }
 function pName(gid,p){
+  const pp=PESERTA&&PESERTA[gid]&&PESERTA[gid]['p'+p];
+  if(pp&&String(pp.nama||'').trim()) return pp.nama;
   for(let r=1;r<=NRD;r++){
     const d=COACH['r'+r]&&COACH['r'+r][gid]&&COACH['r'+r][gid]['p'+p];
     if(d&&d.name) return d.name;
